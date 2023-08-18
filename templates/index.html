@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample</title>
+</head>
+<body>
+    <h1>CRUD App</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for intern in interns %}
+        <tr>
+          <td>{{ intern.id }}</td>
+          <td>{{ intern.name }}</td>
+          <td>{{ intern.age }}</td>
+          <td>
+            <form action="/update" method="post">
+              <input type="hidden" name="id" value="{{ intern.id }}">
+              <input type="text" name="name" value="{{ intern.name }}">
+              <input type="number" name="age" value="{{ intern.age }}">
+              <input type="submit" value="Update">
+            </form>
+            <form action="/delete" method="post">
+              <input type="hidden" name="id" value="{{ intern.id }}">
+              <input type="submit" value="Delete">
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>Add new intern</h2>
+    <form action="/add" method="post">
+      <input type="text" name="name" placeholder="Name">
+      <input type="number" name="age" placeholder="Age">
+      <input type="submit" value="Add">
+    </form>
+</body>
+</html>
