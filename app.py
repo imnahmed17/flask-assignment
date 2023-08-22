@@ -1,4 +1,4 @@
-from flask import Flask, request, g, jsonify
+from flask import Flask, request, g
 from flask_restx import Api, Resource, reqparse
 import psycopg2
 from elasticsearch import Elasticsearch
@@ -24,6 +24,33 @@ api.authorizations = {
 user_namespace = api.namespace('user', description='Operations about user')
 room_namespace = api.namespace('room', description='Operations about searching & sorting')
 
+# JWT configuration
+JWT_SECRET_KEY = secrets.token_hex(32)
+JWT_EXPIRATION_DELTA = timedelta(minutes=30)
+
+# Define a parser for the authorization header
+auth_parser = reqparse.RequestParser()
+auth_parser.add_argument('Authorization', type=str, location='headers')
+
+# Create a parser for the login data
+login_parser = api.parser()
+login_parser.add_argument("username", type=str, location='form')
+login_parser.add_argument("password", type=str, location='form')
+
+# Create a parser for the signup data
+signup_parser = api.parser()
+signup_parser.add_argument("email", type=str, location='form')
+signup_parser.add_argument("username", type=str, location='form')
+signup_parser.add_argument("password", type=str, location='form')
+
+# Create a parser for the search data
+search_parser = api.parser()
+search_parser.add_argument("title", type=str)
+search_parser.add_argument("amenities", type=str)
+search_parser.add_argument("price", type=str)
+search_parser.add_argument("location", type=str)
+search_parser.add_argument("sort_by_price", type=str, choices=("asc", "desc"), default="asc")
+
 # Database connection
 def get_pg_db_connection():
     return psycopg2.connect(
@@ -41,10 +68,6 @@ def get_es_db_connection():
         "scheme": "http"
     }])
 
-# JWT configuration
-JWT_SECRET_KEY = secrets.token_hex(16)
-JWT_EXPIRATION_DELTA = timedelta(minutes=30)
-
 # Helper function to generate JWT token
 def generate_token(username):
     payload = {
@@ -53,14 +76,6 @@ def generate_token(username):
     }
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
     return token
-
-logged_in_users = {}
-def fetch_user_token():
-    return logged_in_users['user_token']
-
-# Define a parser for the authorization header
-auth_parser = reqparse.RequestParser()
-auth_parser.add_argument('Authorization', type=str, location='headers')
 
 # JWT authentication decorator
 def jwt_required(f):
@@ -84,24 +99,6 @@ def jwt_required(f):
     
     return decorated
 
-# Create a parser for the login data
-login_parser = api.parser()
-login_parser.add_argument("username", type=str, location='form', required=True)
-login_parser.add_argument("password", type=str, location='form', required=True)
-
-# Create a parser for the signup data
-signup_parser = api.parser()
-signup_parser.add_argument("email", type=str, required=True)
-signup_parser.add_argument("username", type=str, required=True)
-signup_parser.add_argument("password", type=str, required=True)
-
-# Create a parser for the search data
-search_parser = api.parser()
-search_parser.add_argument("title", type=str, required=True)
-search_parser.add_argument("amenities", type=str, required=True)
-search_parser.add_argument("price", type=float, required=True)
-search_parser.add_argument("location", type=str, required=True)
-
 # Controller
 @user_namespace.route('/login')
 class LoginResource(Resource):
@@ -114,7 +111,7 @@ class LoginResource(Resource):
         },
         responses={
             200: 'User login successful',
-            208: 'User is already logged in',
+            400: 'Provide username and password',
             404: 'User not found',
             500: 'Internal server error'
         }
@@ -125,7 +122,13 @@ class LoginResource(Resource):
         
         try:
             data = request.form
-            username, password = data['username'], data['password']
+            username = data.get('username')
+            password = data.get('password')
+
+            if username is None:
+                return {"message": "Please, provide your username"}, 400
+            elif password is None:
+                return {"message": "Please, provide your password"}, 400
 
             conn = get_pg_db_connection()
             cursor = conn.cursor()
@@ -133,18 +136,11 @@ class LoginResource(Resource):
             user = cursor.fetchone()
 
             if user:
-                # Check if the user is already logged in
-                if logged_in_users:
-                    user_token = fetch_user_token() 
-                    return {"message": "User is already logged in", "token": user_token}, 208
-            
                 token = generate_token(username)
                 user_data = {
                     "email": user[1],
                     "username": user[2]
                 }
-
-                logged_in_users['user_token'] = token
 
                 return {"message": "User login successful", "user_info": user_data, "token": token}, 200
             else:
@@ -165,7 +161,7 @@ class SignupResource(Resource):
         },
         responses={
             201: 'User created successful',
-            400: 'Invalid format',
+            400: 'Invalid input format',
             409: 'User already exists',
             500: 'Internal server error'
         }
@@ -175,10 +171,17 @@ class SignupResource(Resource):
         """Create a new user"""
 
         try:
-            args = signup_parser.parse_args()
-            email = args["email"]
-            username = args["username"]
-            password = args["password"]
+            data = request.form
+            email = data.get('email')
+            username = data.get('username')
+            password = data.get('password')
+
+            if email is None:
+                return {"message": "Please, provide your email"}, 400
+            elif username is None:
+                return {"message": "Please, provide your username"}, 400
+            elif password is None:
+                return {"message": "Please, provide your password"}, 400
 
             # Check if the email or username already exists
             conn = get_pg_db_connection()
@@ -193,14 +196,14 @@ class SignupResource(Resource):
                     return {'message': 'Username already taken'}, 409
             
             # Validate input fields
-            if not email.endswith('@gmail.com'):
-                return {'message': 'Invalid email format. Email must end with @gmail.com'}, 400
+            if not re.match(r'^[a-z][a-z0-9._]*@gmail\.com$', email):
+                return {'message': 'Email must be start with a small letter, no space and end with @gmail.com'}, 400
  
-            if not re.match(r'^[a-z]+[0-9]', username):
-                return {'message': 'Invalid username format. Username should be start with a small letter, followed by other small letters and a number.'}, 400
+            if not re.match(r'^(?=.*\d)[a-z\S]*$', username):
+                return {'message': 'Username should be start with a small letter, followed by other small letters and a number.'}, 400
             
             if not re.match(r'^(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>])[a-zA-Z0-9!@#$%^&*(),.?":{}|<>]{6}$', password):
-                return {'message': 'Invalid password format. Password should be 6 characters long and contain at least 1 number and 1 special character.'}, 400
+                return {'message': 'Password should be 6 characters long and contain at least 1 number and 1 special character.'}, 400
 
             # Insert the new user into the database
             cursor.execute("INSERT INTO users (user_email, user_name, user_password) VALUES (%s, %s, %s)", (email, username, password))
@@ -223,8 +226,9 @@ class SearchResource(Resource):
             'location': 'Enter Location'
         },
         responses={
-            200: 'Data found',
-            404: 'Data not found',
+            200: 'Data found successfully',
+            400: 'Invalid input format',
+            404: 'No data found',
             500: 'Internal server error'
         }
     )
@@ -238,25 +242,51 @@ class SearchResource(Resource):
             amenities = args["amenities"]
             price = args["price"]
             location = args["location"]
+            sort_by_price = args["sort_by_price"]
+
+            # Input field validation
+            if (title and len(title) < 3) or (amenities and len(amenities) < 3) or (location and len(location) < 3):
+                return {'message': 'Input fields must have 3 characters'}, 400
+
+            if price and (not price.isnumeric() or int(price) <= 0):
+                return {'message': 'Price must be numeric and positive'}, 400
+
+            if location is None:
+                return {'message': 'Location is required'}, 400
 
             conn = get_es_db_connection()
             body = {
                 "query": {
                     "bool": {
-                        "must": [
-                            {"match": {"title": title}},
-                            {"match": {"amenities": amenities}},
-                            {"range": {"price": {"lte": price}}},
-                            {"match": {"location": location}}
-                        ]
+                        "must": []
                     }
-                }
+                },
+                "sort": [
+                    { "price": { "order": sort_by_price } }
+                ]
             }
+
+            if title:
+                body["query"]["bool"]["must"].append({ "wildcard": { "title": { "value": "*" + title.strip().lower() + "*" } } })
+
+            if amenities:
+                body["query"]["bool"]["must"].append({ "wildcard": { "amenities": { "value": "*" + amenities.strip().lower() + "*" } } })
+
+            if price:
+                body["query"]["bool"]["must"].append({ "range": { "price": {"lte": price } } })
+
+            if location:
+                body["query"]["bool"]["must"].append({ "wildcard": { "location": { "value": "*" + location.strip().lower() + "*" } } })
+
             result = conn.search(index='room_info', body=body)
             data = result['hits']['hits']
+
+            if not data:  
+                return {'message': 'No data found'}, 404
+        
             sources = [entry["_source"] for entry in data]
             
-            return {'message': 'User created successfully', 'results': sources}, 200
+            return {'message': 'Data found successfully', 'results': sources}, 200
 
         except Exception as e:
             return {'message': 'Internal server error'}, 500
