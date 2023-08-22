@@ -198,7 +198,7 @@ class SignupResource(Resource):
             # Validate input fields
             if not re.match(r'^[a-z][a-z0-9._]*@gmail\.com$', email):
                 return {'message': 'Email must be start with a small letter, no space and end with @gmail.com'}, 400
- 
+
             if not re.match(r'^(?=.*\d)[a-z\S]*$', username):
                 return {'message': 'Username should be start with a small letter, followed by other small letters and a number.'}, 400
             

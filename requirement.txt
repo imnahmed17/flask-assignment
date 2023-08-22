@@ -1,9 +1,6 @@
-At first type Ctrl+Shift+P, then select the Python: Create Environment command to create a virtual environment in your workspace.
-Select venv and then the Python environment you want to use to create it.
-To activate virtual environment type Ctrl+Shift+`.
-After activating virtual environment install the following libraries:
-pip install flask
-pip install flask-restx
-pip install psycopg2-binary
-pip install pyjwt
 pip install elasticsearch
+
+Flask==2.3.2
+flask-restx==1.1.0
+psycopg2-binary==2.9.7
+PyJWT==2.8.0
