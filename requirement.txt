@@ -1,6 +1,5 @@
-pip install elasticsearch
-
 Flask==2.3.2
 flask-restx==1.1.0
 psycopg2-binary==2.9.7
 PyJWT==2.8.0
+elasticsearch==8.9.0
