@@ -6,16 +6,10 @@ The Flask Assignment API is a RESTful web service built using Flask and Flask-RE
 
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-  - [PostgreSQL Setup](#postgresql-setup)
-  - [Elasticsearch And Kibana Setup](#elasticsearch-and-kibana-setup)
 - [API Endpoints](#api-endpoints)
   - [User Login](#user-login)
   - [User Registration](#user-registration)
   - [Room Search](#room-search)
-- [Authentication](#authentication)
-- [Data Storage](#data-storage)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Prerequisites
 
