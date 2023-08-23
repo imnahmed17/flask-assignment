@@ -7,7 +7,7 @@ The Flask Assignment API is a RESTful web service built using Flask and Flask-RE
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
   - [PostgreSQL Setup](#postgresql-setup)
-  - [Elasticsearch and Kibana Setup](#elasticsearch-and-kibana-setip)
+  - [Elasticsearch And Kibana Setup](#elasticsearch-and-kibana-setup)
 - [API Endpoints](#api-endpoints)
   - [User Login](#user-login)
   - [User Registration](#user-registration)
@@ -50,7 +50,15 @@ pip install -r requirement.txt
 cd pg
 docker-compose up -d
 ```
-Now open your browser and type `http://localhost:8080` into the url to access PostgreSQL. For login give email: admin@user.com and password: adminuser. 
+Now open your browser and type `http://localhost:8080` into the url to access PostgreSQL. For login give Email: admin@user.com and Password: adminuser. After that, right click on `Server > Register > Server` in left sidemenu. In general tab give type any name you want as Server name. In connection tab give Host name: postgres, Username: myuser, Password: mypassword and save it. Then nevigate your server name and create a database right clicking on your server name. For writing database queries open `Query Tool`. To open `Query Tool` right click on your database name. Now write the below query to create a table using `Query Tool`:
+```bash
+CREATE TABLE users (
+  user_id serial PRIMARY KEY,
+  user_email varchar(30) UNIQUE,
+  user_name varchar(30) UNIQUE,
+  user_password varchar(20)
+);
+```
 
 **5. Elasticsearch and Kibana setup:**
 ```bash
@@ -58,11 +66,31 @@ cd ..
 cd es
 docker-compose up -d
 ```
-Now again open your browser and type `http://localhost:9201` into the url to access Elasticsearch and Kibana.
+Now again open your browser and type `http://localhost:5601` into the url to access Elasticsearch and Kibana. After that click on the menu icon and select Dev Tools under Management for writing queries. Write the bellow queries to perform further operations.
+```bash
+POST /room_info/_bulk
+{ "index": { "_id": "1" } }
+{ "title": "Spacious Loft", "amenities": ["Gym", "Pool", "Balcony"], "price": 150, "location": "Dhaka, Bangladesh" }
+{ "index": { "_id": "2" } }
+{ "title": "Lakeside Bungalow", "amenities": ["Fishing Dock", "BBQ"], "price": 130, "location": "Chittagong, Bangladesh" }
+{ "index": { "_id": "3" } }
+{ "title": "Family Playground", "amenities": ["Playground", "Kid's Room", "WiFi"], "price": 140, "location": "Khulna, Bangladesh" }
+{ "index": { "_id": "4" } }
+{ "title": "Family Farmhouse", "amenities": ["Canoe", "Fire Pit", "WiFi", "Gym"], "price": 175, "location": "Rajshahi, Bangladesh" }
+{ "index": { "_id": "5" } }
+{ "title": "Family Townhouse", "amenities": ["Loft Bed", "Artistic Space", "Gym"], "price": 90, "location": "Sylhet, Bangladesh" }
+{ "index": { "_id": "6" } }
+{ "title": "Family Resthouse", "amenities": ["Hot Tub", "Wildlife Viewing", "WiFi"], "price": 220, "location": "Cox's Bazar, Bangladesh" }
+```
 
 To find containers name and ports:
 ```bash
 docker ps -a
+```
+
+To stop docker containers:
+```bash
+docker-compose down
 ```
 
 **6. Run this application:**
